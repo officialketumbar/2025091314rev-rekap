@@ -39,12 +39,19 @@ th{background:#eee}
     margin-bottom: 10px;
     color: #333;
 }
+
+/* Sembunyikan kolom 1, 4, dan 5 (index 0, 3, 4) */
+th:nth-child(1), td:nth-child(1),
+th:nth-child(4), td:nth-child(4),
+th:nth-child(5), td:nth-child(5) {
+    display: none;
+}
 </style>
 </head>
 <body>
 
 <!-- Gambar header -->
-<img src="https://64.media.tumblr.com/943ef275fe79b8059051168ebf5fb78f/2c66128e499867cd-15/s2048x3072/7f41deaf87d9143c61996bf783223d6d12442c80.jpg" alt="Header" class="header-img">
+<img src="https://64.media.tumblr.com/943ef275fe79b8059051168ebf5fb78f/2c66128e499867cd-15/s2048x3072/7f41deaf87d9143c61996bf783223d6d12442c80.jpg " alt="Header" class="header-img">
 
 <!-- Judul -->
 <div class="header-title">REKAP PESERTA SYMPOSIUM | KARIADI MEDICAL SUMMIT 2025 | PO HOTEL SEMARANG | 13-14 SEPTEMBER 2025</div>
@@ -56,7 +63,6 @@ th{background:#eee}
 
 <script>
 let previousHash=null;
-// HAPUS centerCols=[2,3] karena kolom 3 & 4 (index 2 & 3) tidak perlu di-center lagi
 let lastRowElement = null;
 
 function hashData(s){
@@ -74,7 +80,7 @@ function formatDate(t){
     return(`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`)
 }
 
-function formatDateTime(t){
+function formatDateTimeShort(t){
     const d=new Date(t);
     if(isNaN(d))return t;
     const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
@@ -91,7 +97,7 @@ function parseDateTime(str){
 
 async function fetchData(){
     try{
-        const r=await fetch('https://script.google.com/macros/s/AKfycbyozLaJznbZwe0DkKLmhQfoKQqyscbI9O6EyJha7JxR-H7-de_465jFH4fYKjZ1P2Di/exec');
+        const r=await fetch('https://script.google.com/macros/s/AKfycbyozLaJznbZwe0DkKLmhQfoKQqyscbI9O6EyJha7JxR-H7-de_465jFH4fYKjZ1P2Di/exec ');
         const d=await r.json();
         const s=JSON.stringify(d);
         const h=hashData(s);
@@ -117,20 +123,19 @@ function renderTable(data){
     let html="<thead><tr>";
     data[0].forEach(h=>html+=`<th>${h}</th>`);
     html+="</tr></thead><tbody>";
-    
+
     for(let i=1;i<data.length;i++){
         html+="<tr>";
         data[i].forEach((c,j)=>{
             let content=c,cls=[];
-            // Kolom ke-7 (index 6) diformat sebagai tanggal dan waktu
+            // Kolom ke-7 (index 6) diformat sebagai tanggal dan waktu (dd/mm/yy hh:mm)
             if(j===6 && typeof c==="string"&&c.match(/^\d{4}-\d{2}-\d{2}T/)){
-                content=formatDateTime(c);
+                content=formatDateTimeShort(c);
                 cls.push("date-col")
             } else if(typeof c==="string"&&c.match(/^\d{4}-\d{2}-\d{2}T/)){
                 content=formatDate(c);
                 cls.push("date-col")
             }
-            // HAPUS pemanggilan centerCols.includes(j) agar kolom 3 & 4 tetap rata kiri
             html+=`<td class="${cls.join(" ")}">${content}</td>`
         });
         html+="</tr>"
@@ -138,7 +143,7 @@ function renderTable(data){
     html+="</tbody>";
     t.innerHTML=html;
     t.style.visibility="visible";
-    
+
     const prevHighlighted = t.querySelector('.last-row-highlight');
     if(prevHighlighted) prevHighlighted.classList.remove('last-row-highlight');
 
