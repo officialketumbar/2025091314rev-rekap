@@ -15,7 +15,7 @@ th{background:#eee}
 #noData{color:red;margin-top:0;display:none}
 #search{margin-bottom:2px;font-size:8px;padding:2px;width:200px}
 
-/* Tambahan untuk baris terakhir */
+/* Highlight baris terakhir */
 @keyframes highlight-fade {
     0% { background-color: #ffffcc; }
     100% { background-color: transparent; }
@@ -24,7 +24,16 @@ th{background:#eee}
     animation: highlight-fade 20s forwards;
 }
 
-/* Gaya untuk gambar dan judul */
+/* Animasi kedip untuk baris baru */
+@keyframes new-blink {
+    0%, 100% { background-color: #fffc99; }
+    50% { background-color: transparent; }
+}
+.new-row-blink {
+    animation: new-blink 1s step-start 30; /* 30 kedip = 30 detik */
+}
+
+/* Gaya header */
 .header-img {
     width: 100%;
     max-width: 600px;
@@ -40,7 +49,7 @@ th{background:#eee}
     color: #333;
 }
 
-/* Sembunyikan kolom 1, 4, dan 5 (index 0, 3, 4) */
+/* Sembunyikan kolom 1, 4, 5 (index 0, 3, 4) */
 th:nth-child(1), td:nth-child(1),
 th:nth-child(4), td:nth-child(4),
 th:nth-child(5), td:nth-child(5) {
@@ -51,7 +60,7 @@ th:nth-child(5), td:nth-child(5) {
 <body>
 
 <!-- Gambar header -->
-<img src="https://64.media.tumblr.com/943ef275fe79b8059051168ebf5fb78f/2c66128e499867cd-15/s2048x3072/7f41deaf87d9143c61996bf783223d6d12442c80.jpg " alt="Header" class="header-img">
+<img src="https://64.media.tumblr.com/943ef275fe79b8059051168ebf5fb78f/2c66128e499867cd-15/s2048x3072/7f41deaf87d9143c61996bf783223d6d12442c80.jpg" alt="Header" class="header-img">
 
 <!-- Judul -->
 <div class="header-title">REKAP PESERTA SYMPOSIUM | KARIADI MEDICAL SUMMIT 2025 | PO HOTEL SEMARANG | 13-14 SEPTEMBER 2025</div>
@@ -62,90 +71,91 @@ th:nth-child(5), td:nth-child(5) {
 <p id="noData">Belum ada data peserta tersedia.</p>
 
 <script>
-let previousHash=null;
+let previousHash = null;
 let lastRowElement = null;
 
-function hashData(s){
-    let h=0;
-    for(let i=0;i<s.length;i++){
-        h=(h<<5)-h+s.charCodeAt(i);
-        h|=0
+function hashData(s) {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+        h = (h << 5) - h + s.charCodeAt(i);
+        h |= 0;
     }
-    return h
+    return h;
 }
 
-function formatDate(t){
-    const d=new Date(t);
-    if(isNaN(d))return t;
-    return(`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`)
+function formatDate(t) {
+    const d = new Date(t);
+    if (isNaN(d)) return t;
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
 }
 
-function formatDateTimeShort(t){
-    const d=new Date(t);
-    if(isNaN(d))return t;
-    const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
-    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+function formatDateTimeShort(t) {
+    const d = new Date(t);
+    if (isNaN(d)) return t;
+    const dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+    const timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
     return `${dateStr} ${timeStr}`;
 }
 
-function parseDateTime(str){
-    const m=str.match(/^(\d{2})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/);
-    if(!m)return null;
-    const[,d,mo,y,H,i]=m.map(Number);
-    return new Date(2000+y,mo-1,d,H,i);
+function parseDateTime(str) {
+    const m = str.match(/^(\d{2})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/);
+    if (!m) return null;
+    const [, d, mo, y, H, i] = m.map(Number);
+    return new Date(2000 + y, mo - 1, d, H, i);
 }
 
-async function fetchData(){
-    try{
-        const r=await fetch('https://script.google.com/macros/s/AKfycbyozLaJznbZwe0DkKLmhQfoKQqyscbI9O6EyJha7JxR-H7-de_465jFH4fYKjZ1P2Di/exec ');
-        const d=await r.json();
-        const s=JSON.stringify(d);
-        const h=hashData(s);
-        if(h!==previousHash){
+async function fetchData() {
+    try {
+        const r = await fetch('https://script.google.com/macros/s/AKfycbyozLaJznbZwe0DkKLmhQfoKQqyscbI9O6EyJha7JxR-H7-de_465jFH4fYKjZ1P2Di/exec');
+        const d = await r.json();
+        const s = JSON.stringify(d);
+        const h = hashData(s);
+        if (h !== previousHash) {
             renderTable(d);
-            previousHash=h
+            previousHash = h;
         }
-        document.getElementById("loading").style.display="none"
-    }catch(e){
-        console.error("Fetch error:",e);
-        document.getElementById("loading").textContent="Gagal memuat data."
+        document.getElementById("loading").style.display = "none";
+    } catch (e) {
+        console.error("Fetch error:", e);
+        document.getElementById("loading").textContent = "Gagal memuat data.";
     }
 }
 
-function renderTable(data){
-    const t=document.getElementById("dataTable"),n=document.getElementById("noData");
-    if(!data||data.length===0){
-        t.innerHTML="";
-        n.style.display="block";
-        return
+function renderTable(data) {
+    const t = document.getElementById("dataTable"), n = document.getElementById("noData");
+    if (!data || data.length === 0) {
+        t.innerHTML = "";
+        n.style.display = "block";
+        return;
     }
-    n.style.display="none";
-    let html="<thead><tr>";
-    data[0].forEach(h=>html+=`<th>${h}</th>`);
-    html+="</tr></thead><tbody>";
+    n.style.display = "none";
 
-    for(let i=1;i<data.length;i++){
-        html+="<tr>";
-        data[i].forEach((c,j)=>{
-            let content=c,cls=[];
-            // Kolom ke-7 (index 6) diformat sebagai tanggal dan waktu (dd/mm/yy hh:mm)
-            if(j===6 && typeof c==="string"&&c.match(/^\d{4}-\d{2}-\d{2}T/)){
-                content=formatDateTimeShort(c);
-                cls.push("date-col")
-            } else if(typeof c==="string"&&c.match(/^\d{4}-\d{2}-\d{2}T/)){
-                content=formatDate(c);
-                cls.push("date-col")
+    let html = "<thead><tr>";
+    data[0].forEach(h => html += `<th>${h}</th>`);
+    html += "</tr></thead><tbody>";
+
+    for (let i = 1; i < data.length; i++) {
+        html += "<tr>";
+        data[i].forEach((c, j) => {
+            let content = c, cls = [];
+            if (j === 6 && typeof c === "string" && c.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                content = formatDateTimeShort(c);
+                cls.push("date-col");
+            } else if (typeof c === "string" && c.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                content = formatDate(c);
+                cls.push("date-col");
             }
-            html+=`<td class="${cls.join(" ")}">${content}</td>`
+            html += `<td class="${cls.join(" ")}">${content}</td>`;
         });
-        html+="</tr>"
+        html += "</tr>";
     }
-    html+="</tbody>";
-    t.innerHTML=html;
-    t.style.visibility="visible";
+    html += "</tbody>";
+    t.innerHTML = html;
+    t.style.visibility = "visible";
 
+    // Highlight baris terakhir
     const prevHighlighted = t.querySelector('.last-row-highlight');
-    if(prevHighlighted) prevHighlighted.classList.remove('last-row-highlight');
+    if (prevHighlighted) prevHighlighted.classList.remove('last-row-highlight');
 
     let latestRow = null;
     let latestDate = new Date(0);
@@ -153,36 +163,49 @@ function renderTable(data){
     const rows = t.querySelectorAll('tbody tr');
     rows.forEach(row => {
         const cell = row.cells[6];
-        if(cell) {
+        if (cell) {
             const text = cell.textContent.trim();
             const parsed = parseDateTime(text);
-            if(parsed && parsed > latestDate) {
+            if (parsed && parsed > latestDate) {
                 latestDate = parsed;
                 latestRow = row;
             }
         }
     });
 
-    if(latestRow) {
+    if (latestRow) {
         latestRow.classList.add('last-row-highlight');
         lastRowElement = latestRow;
     }
+
+    // Beri efek blink pada baris baru
+    const currentRows = Array.from(t.querySelectorAll('tbody tr'));
+    const prevIds = new Set(
+        (lastRowElement ? [lastRowElement] : [])
+        .map(r => r.textContent)
+    );
+    currentRows.forEach(r => {
+        if (!prevIds.has(r.textContent)) {
+            r.classList.add('new-row-blink');
+            setTimeout(() => r.classList.remove('new-row-blink'), 30000);
+        }
+    });
 }
 
-document.getElementById("search").addEventListener("input",function(){
-    const k=this.value.toLowerCase(),rows=document.querySelectorAll("#dataTable tbody tr");
-    let any=false;
-    rows.forEach(r=>{
-        const show=Array.from(r.cells).some(c=>c.textContent.toLowerCase().includes(k));
-        r.style.display=show?"":"none";
-        if(show)any=true
+document.getElementById("search").addEventListener("input", function () {
+    const k = this.value.toLowerCase(), rows = document.querySelectorAll("#dataTable tbody tr");
+    let any = false;
+    rows.forEach(r => {
+        const show = Array.from(r.cells).some(c => c.textContent.toLowerCase().includes(k));
+        r.style.display = show ? "" : "none";
+        if (show) any = true;
     });
-    document.getElementById("noData").style.display=any?"none":"block"
+    document.getElementById("noData").style.display = any ? "none" : "block";
 });
 
-(async function(){
+(async function () {
     await fetchData();
-    setInterval(fetchData,10000)
+    setInterval(fetchData, 10000);
 })();
 </script>
 </body>
