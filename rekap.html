@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Rekap Peserta Realtime</title>
+<style>
+body{font-family:Arial,sans-serif;padding:2px;background:#fff}
+.loading{font-style:italic;color:gray;margin-bottom:0}
+table{width:100%;font-size:10px;border-collapse:collapse;background:#fff;margin-top:0}
+th,td{border:1px solid #ccc;padding:2px}
+th{background:#eee}
+.date-col{background:#f7fbee}
+.center{text-align:center}
+#noData{color:red;margin-top:0;display:none}
+#search{margin-bottom:2px;font-size:8px;padding:2px;width:200px}
+
+/* Tambahan untuk baris terakhir */
+@keyframes highlight-fade {
+    0% { background-color: #ffffcc; }
+    100% { background-color: transparent; }
+}
+.last-row-highlight {
+    animation: highlight-fade 20s forwards;
+}
+
+/* Gaya untuk gambar dan judul */
+.header-img {
+    width: 100%;
+    max-width: 600px;
+    height: auto;
+    display: block;
+    margin: 0 auto 10px auto;
+}
+.header-title {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #333;
+}
+</style>
+</head>
+<body>
+
+<!-- Gambar header -->
+<img src="https://64.media.tumblr.com/943ef275fe79b8059051168ebf5fb78f/2c66128e499867cd-15/s2048x3072/7f41deaf87d9143c61996bf783223d6d12442c80.jpg" alt="Header" class="header-img">
+
+<!-- Judul -->
+<div class="header-title">REKAP PESERTA SYMPOSIUM | KARIADI MEDICAL SUMMIT 2025 | PO HOTEL SEMARANG | 13-14 SEPTEMBER 2025</div>
+
+<input id="search" type="text" placeholder="Cari peserta...">
+<p id="loading" class="loading">Loading data...</p>
+<table id="dataTable" style="visibility:hidden"></table>
+<p id="noData">Belum ada data peserta tersedia.</p>
+
+<script>
+let previousHash=null;
+// HAPUS centerCols=[2,3] karena kolom 3 & 4 (index 2 & 3) tidak perlu di-center lagi
+let lastRowElement = null;
+
+function hashData(s){
+    let h=0;
+    for(let i=0;i<s.length;i++){
+        h=(h<<5)-h+s.charCodeAt(i);
+        h|=0
+    }
+    return h
+}
+
+function formatDate(t){
+    const d=new Date(t);
+    if(isNaN(d))return t;
+    return(`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`)
+}
+
+function formatDateTime(t){
+    const d=new Date(t);
+    if(isNaN(d))return t;
+    const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`;
+    const timeStr = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `${dateStr} ${timeStr}`;
+}
+
+function parseDateTime(str){
+    const m=str.match(/^(\d{2})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2})$/);
+    if(!m)return null;
+    const[,d,mo,y,H,i]=m.map(Number);
+    return new Date(2000+y,mo-1,d,H,i);
+}
+
+async function fetchData(){
+    try{
+        const r=await fetch('https://script.google.com/macros/s/AKfycbyozLaJznbZwe0DkKLmhQfoKQqyscbI9O6EyJha7JxR-H7-de_465jFH4fYKjZ1P2Di/exec');
+        const d=await r.json();
+        const s=JSON.stringify(d);
+        const h=hashData(s);
+        if(h!==previousHash){
+            renderTable(d);
+            previousHash=h
+        }
+        document.getElementById("loading").style.display="none"
+    }catch(e){
+        console.error("Fetch error:",e);
+        document.getElementById("loading").textContent="Gagal memuat data."
+    }
+}
+
+function renderTable(data){
+    const t=document.getElementById("dataTable"),n=document.getElementById("noData");
+    if(!data||data.length===0){
+        t.innerHTML="";
+        n.style.display="block";
+        return
+    }
+    n.style.display="none";
+    let html="<thead><tr>";
+    data[0].forEach(h=>html+=`<th>${h}</th>`);
+    html+="</tr></thead><tbody>";
+    
+    for(let i=1;i<data.length;i++){
+        html+="<tr>";
+        data[i].forEach((c,j)=>{
+            let content=c,cls=[];
+            // Kolom ke-7 (index 6) diformat sebagai tanggal dan waktu
+            if(j===6 && typeof c==="string"&&c.match(/^\d{4}-\d{2}-\d{2}T/)){
+                content=formatDateTime(c);
+                cls.push("date-col")
+            } else if(typeof c==="string"&&c.match(/^\d{4}-\d{2}-\d{2}T/)){
+                content=formatDate(c);
+                cls.push("date-col")
+            }
+            // HAPUS pemanggilan centerCols.includes(j) agar kolom 3 & 4 tetap rata kiri
+            html+=`<td class="${cls.join(" ")}">${content}</td>`
+        });
+        html+="</tr>"
+    }
+    html+="</tbody>";
+    t.innerHTML=html;
+    t.style.visibility="visible";
+    
+    const prevHighlighted = t.querySelector('.last-row-highlight');
+    if(prevHighlighted) prevHighlighted.classList.remove('last-row-highlight');
+
+    let latestRow = null;
+    let latestDate = new Date(0);
+
+    const rows = t.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        const cell = row.cells[6];
+        if(cell) {
+            const text = cell.textContent.trim();
+            const parsed = parseDateTime(text);
+            if(parsed && parsed > latestDate) {
+                latestDate = parsed;
+                latestRow = row;
+            }
+        }
+    });
+
+    if(latestRow) {
+        latestRow.classList.add('last-row-highlight');
+        lastRowElement = latestRow;
+    }
+}
+
+document.getElementById("search").addEventListener("input",function(){
+    const k=this.value.toLowerCase(),rows=document.querySelectorAll("#dataTable tbody tr");
+    let any=false;
+    rows.forEach(r=>{
+        const show=Array.from(r.cells).some(c=>c.textContent.toLowerCase().includes(k));
+        r.style.display=show?"":"none";
+        if(show)any=true
+    });
+    document.getElementById("noData").style.display=any?"none":"block"
+});
+
+(async function(){
+    await fetchData();
+    setInterval(fetchData,10000)
+})();
+</script>
+</body>
+</html>
